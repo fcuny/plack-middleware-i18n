@@ -2,8 +2,10 @@ package Plack::Middleware::i18n;
 
 use strict;
 use warnings;
+
 use Plack::Util;
 use Plack::Util::Accessor qw/default_lang/;
+use Plack::Request;
 use I18N::LangTags;
 use I18N::LangTags::Detect;
 
@@ -12,22 +14,34 @@ our $VERSION = '0.01';
 use parent 'Plack::Middleware';
 
 sub call {
-    my $self = shift;
-    my $res  = $self->app->(@_);
+    my ($self, $env) = @_;
 
-    my $h = Plack::Util::headers($res->[1]);
+    my $locale;
 
-    my @languages = ($self->default_lang) if $self->default_lang;
-    push @languages,
-      I18N::LangTags::implicate_supers(
-        I18N::LangTags::Detect->http_accept_langs($h->get('Accept-Language')));
+    if (my $lang = $env->{'HTTP_ACCEPT_LANGUAGE'}) {
+        $locale = (
+            split(
+                '-',
+                (   I18N::LangTags::implicate_supers(
+                        I18N::LangTags::Detect->http_accept_langs($lang)
+                    )
+                  )[0]
+            )
+        )[0];
+    }
+    else {
+        $locale = $self->default_lang // 'en';
+    }
 
-    # XXX store languages in psgix.languages
-    # XXX if session, store in session too
-    # XXX maybe redirect to appropriate location ?
-    
-    return $res;
+    $env->{'psgix.locale'} = $locale;
+
+    if (my $session = $env->{'psgix.session'}) {
+        $session->{locale} = $locale;
+    }
+
+    $self->app->($env);
 }
+
 
 1;
 
