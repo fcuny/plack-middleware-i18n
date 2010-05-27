@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 use Plack::Util;
-use Plack::Util::Accessor qw/default_lang/;
-use Plack::Request;
+use Plack::Util::Accessor qw/default_locale/;
 use I18N::LangTags;
 use I18N::LangTags::Detect;
 
@@ -30,7 +29,7 @@ sub call {
         )[0];
     }
     else {
-        $locale = $self->default_lang // 'en';
+        $locale = $self->default_locale // 'en';
     }
 
     $env->{'psgix.locale'} = $locale;
